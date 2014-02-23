@@ -4,6 +4,8 @@ require 'nokogiri'
 
 module KanazawarbSlides
 
+  TARGET_SLIDE_SERVICE=/speakerdeck|slideshare/
+
   def self.meetup_count
     main_page = Nokogiri::HTML(open('http://kanazawarb.github.io/meetup'))
     main_page.css('header ul li').size
@@ -18,12 +20,22 @@ module KanazawarbSlides
 
         doc.css('a').each do |link|
           href = link.attributes['href'].value
-          urls << href if href =~ /speakerdeck|slideshare/
+          if href =~ TARGET_SLIDE_SERVICE
+            urls << href
+          elsif href =~/t\.co/
+            original_url = convert_to_original_url(href)
+            urls << original_url if original_url =~ TARGET_SLIDE_SERVICE
+          end
         end
       rescue
         next
       end
     end
     urls.uniq!
+  end
+
+  def self.convert_to_original_url(omission_url)
+    res = Net::HTTP.get_response(URI.parse(omission_url))
+    res["location"]
   end
 end
