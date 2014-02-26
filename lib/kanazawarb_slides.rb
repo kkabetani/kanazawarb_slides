@@ -1,6 +1,7 @@
 require 'kanazawarb_slides/version'
 require 'open-uri'
 require 'nokogiri'
+require 'net/http'
 
 module KanazawarbSlides
 
@@ -34,8 +35,17 @@ module KanazawarbSlides
     urls.uniq!
   end
 
-  def self.convert_to_original_url(omission_url)
-    res = Net::HTTP.get_response(URI.parse(omission_url))
-    res["location"]
+  def self.convert_to_original_url(omission_url, limit = 10)
+    raise ArgumentError, 'http redirect too deep' if limit == 0
+
+    response = Net::HTTP.get_response(URI.parse(omission_url))
+    case response
+    when Net::HTTPSuccess then
+      omission_url
+    when Net::HTTPRedirection then
+      convert_to_original_url(response["location"], limit - 1)
+    else
+      nil
+    end
   end
 end
